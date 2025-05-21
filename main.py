@@ -2,15 +2,28 @@ from functions_framework import http
 from flask import make_response, Request
 import os
 import logging
-from google.cloud import bigquery
+from google.cloud import bigquery, firestore
 from google.api_core.exceptions import BadRequest
 
+class FirestoreLogger:
+    def __init__(self, project_id):
+        self.firestore_client = firestore.Client(project=project_id)
+
+    def log_transaction(self, transaction):
+        try:
+            doc_ref = self.firestore_client.collection("transactions_to_check").document(str(transaction["transaction_id"]))
+            doc_ref.set(transaction)
+            logging.info(f"Logged transaction {transaction['transaction_id']} to Firestore.")
+        except Exception as e:
+            logging.error(f"Failed to log transaction {transaction['transaction_id']} to Firestore: {e}")
+
 class BigQueryTransactionService:
-    def __init__(self, project_id, dataset_id, table_id):
+    def __init__(self, project_id, dataset_id, table_id, firestore_logger=None):
         self.project_id = project_id
         self.dataset_id = dataset_id
         self.table_id = table_id
         self.client = bigquery.Client(project=project_id)
+        self.firestore_logger = firestore_logger
 
     def fetch_transactions(self):
         query = f"""
@@ -44,6 +57,10 @@ class BigQueryTransactionService:
         except Exception as e:
             raise
 
+    def log_transaction_to_firestore(self, transaction):
+        if self.firestore_logger:
+            self.firestore_logger.log_transaction(transaction)
+
 def get_env_var(name):
     value = os.environ.get(name)
     if not value:
@@ -64,7 +81,8 @@ def synchronize_transactions(request: Request) -> str:
     except EnvironmentError as e:
         return make_response(str(e), 500)
 
-    bq_service = BigQueryTransactionService(project_id, dataset_id, table_id)
+    firestore_logger = FirestoreLogger(project_id)
+    bq_service = BigQueryTransactionService(project_id, dataset_id, table_id, firestore_logger=firestore_logger)
 
     try:
         transactions = bq_service.fetch_transactions()
@@ -86,6 +104,8 @@ def synchronize_transactions(request: Request) -> str:
             if updated:
                 updated_count += 1
                 logging.info(f"Updated transaction {transaction['transaction_id']} with total sale price {total_sale_price}")
+                # Log to Firestore after successful update
+                bq_service.log_transaction_to_firestore(transaction)
             elif reason == "streaming_buffer":
                 skipped_streaming += 1
         except Exception as e:

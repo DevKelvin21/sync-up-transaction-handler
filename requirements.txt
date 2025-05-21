@@ -11,6 +11,7 @@ google-api-core==2.24.2
 google-auth==2.40.1
 google-cloud-bigquery==3.33.0
 google-cloud-core==2.4.3
+google-cloud-firestore==2.20.2
 google-crc32c==1.7.1
 google-resumable-media==2.7.2
 googleapis-common-protos==1.70.0
@@ -20,6 +21,7 @@ gunicorn==23.0.0
 idna==3.10
 itsdangerous==2.2.0
 Jinja2==3.1.6
+logging==0.4.9.6
 MarkupSafe==3.0.2
 packaging==25.0
 proto-plus==1.26.1
