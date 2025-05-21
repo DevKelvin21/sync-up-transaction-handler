@@ -1,0 +1,43 @@
+name: Deploy Synchronize Transactions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Synchronize Transactions
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Deploy Cloud Function
+      run: |
+        gcloud functions deploy synchronize_transactions \
+          --runtime python312 \
+          --trigger-http \
+          --memory 512MB \
+          --timeout 540s \
+          --allow-unauthenticated \
+          --entry-point synchronize_transactions \
+          --region us-central1 \
+          --service-account ${{ secrets.SERVICE_ACCOUNT }} \
+          --set-env-vars BQ_PROJECT=${{ secrets.BQ_PROJECT }},\
+        BQ_DATASET=${{ secrets.BQ_DATASET }},\
+        BQ_TABLE=${{ secrets.BQ_TABLE }}
