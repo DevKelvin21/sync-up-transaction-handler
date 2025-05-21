@@ -29,7 +29,7 @@ jobs:
 
     - name: Deploy Cloud Function
       run: |
-        gcloud functions deploy synchronize_transactions \
+        gcloud functions deploy synchronize_transactions_v1 \
           --runtime python312 \
           --trigger-http \
           --no-gen2 \
