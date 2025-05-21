@@ -1,8 +1,7 @@
 from functions_framework import http
 from flask import make_response, Request
-from google.cloud import logging
 import os
-import logging as py_logging
+import logging
 from google.cloud import bigquery
 from google.api_core.exceptions import BadRequest
 
@@ -34,7 +33,7 @@ class BigQueryTransactionService:
         except BadRequest as e:
             # Streaming buffer issue: skip and log
             if "Streaming buffer" in str(e):
-                py_logging.warning(f"Transaction {transaction_id} is in the streaming buffer. Skipping update.")
+                logging.warning(f"Transaction {transaction_id} is in the streaming buffer. Skipping update.")
                 return False, "streaming_buffer"
             raise
         except Exception as e:
@@ -43,16 +42,15 @@ class BigQueryTransactionService:
 def get_env_var(name):
     value = os.environ.get(name)
     if not value:
-        py_logging.error(f"{name} environment variable is not set.")
+        logging.error(f"{name} environment variable is not set.")
         raise EnvironmentError(f"{name} environment variable is not set.")
     return value
 
 @http
 def synchronize_transactions(request: Request) -> str:
     # Initialize logging
-    client = logging.Client()
-    client.setup_logging()
-    py_logging.info("Starting synchronization process")
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Starting synchronization process")
 
     try:
         project_id = get_env_var("BQ_PROJECT")
@@ -66,9 +64,9 @@ def synchronize_transactions(request: Request) -> str:
     try:
         transactions = bq_service.fetch_transactions()
     except Exception as e:
-        py_logging.error(f"Error executing query: {e}")
+        logging.error(f"Error executing query: {e}")
         return make_response(f"Error executing query: {e}", 500)
-    py_logging.info(f"Retrieved {len(transactions)} transactions")
+    logging.info(f"Retrieved {len(transactions)} transactions")
 
     updated_count = 0
     skipped_streaming = 0
@@ -82,13 +80,13 @@ def synchronize_transactions(request: Request) -> str:
             updated, reason = bq_service.update_total_sale_price(transaction["id"], total_sale_price)
             if updated:
                 updated_count += 1
-                py_logging.info(f"Updated transaction {transaction['id']} with total sale price {total_sale_price}")
+                logging.info(f"Updated transaction {transaction['id']} with total sale price {total_sale_price}")
             elif reason == "streaming_buffer":
                 skipped_streaming += 1
         except Exception as e:
-            py_logging.error(f"Error updating transaction {transaction['id']}: {e}")
+            logging.error(f"Error updating transaction {transaction['id']}: {e}")
             return make_response(f"Error updating transaction {transaction['id']}: {e}", 500)
 
-    py_logging.info(f"All transactions processed. Updated: {updated_count}, Skipped (streaming buffer): {skipped_streaming}")
+    logging.info(f"All transactions processed. Updated: {updated_count}, Skipped (streaming buffer): {skipped_streaming}")
 
     return make_response(f"Synchronization complete. Updated: {updated_count}, Skipped (streaming buffer): {skipped_streaming}", 200)
