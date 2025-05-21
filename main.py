@@ -77,15 +77,15 @@ def synchronize_transactions(request: Request) -> str:
             continue
         total_sale_price = sum(sale["quantity"] * sale["unit_price"] for sale in sales)
         try:
-            updated, reason = bq_service.update_total_sale_price(transaction["id"], total_sale_price)
+            updated, reason = bq_service.update_total_sale_price(transaction["transaction_id"], total_sale_price)
             if updated:
                 updated_count += 1
-                logging.info(f"Updated transaction {transaction['id']} with total sale price {total_sale_price}")
+                logging.info(f"Updated transaction {transaction['transaction_id']} with total sale price {total_sale_price}")
             elif reason == "streaming_buffer":
                 skipped_streaming += 1
         except Exception as e:
-            logging.error(f"Error updating transaction {transaction['id']}: {e}")
-            return make_response(f"Error updating transaction {transaction['id']}: {e}", 500)
+            logging.error(f"Error updating transaction {transaction['transaction_id']}: {e}")
+            return make_response(f"Error updating transaction {transaction['transaction_id']}: {e}", 500)
 
     logging.info(f"All transactions processed. Updated: {updated_count}, Skipped (streaming buffer): {skipped_streaming}")
 
