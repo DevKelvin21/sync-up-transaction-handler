@@ -21,10 +21,15 @@ class BigQueryTransactionService:
         return [dict(row) for row in query_job.result()]
 
     def update_total_sale_price(self, transaction_id, total_sale_price):
+        # If transaction_id is a string, quote it in SQL
+        if isinstance(transaction_id, str):
+            id_value = f"'{transaction_id}'"
+        else:
+            id_value = str(transaction_id)
         update_query = f"""
         UPDATE `{self.project_id}.{self.dataset_id}.{self.table_id}`
         SET total_sale_price = {total_sale_price}
-        WHERE id = {transaction_id}
+        WHERE transaction_id = {id_value}
         """
         try:
             update_job = self.client.query(update_query)
