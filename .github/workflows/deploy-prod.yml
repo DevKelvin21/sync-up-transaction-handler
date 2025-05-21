@@ -32,6 +32,7 @@ jobs:
         gcloud functions deploy synchronize_transactions \
           --runtime python312 \
           --trigger-http \
+          --no-gen2 \
           --memory 512MB \
           --timeout 540s \
           --allow-unauthenticated \
